@@ -16,6 +16,6 @@ namespace CANAdminApi.Data.Entities
         public Guid CanMessageId { get; set; }
 
         [ForeignKey(nameof(CanMessageId))]
-        public CanMessage CanMessage { get; set; }
+        public virtual CanMessage CanMessage { get; set; }
     }
 }

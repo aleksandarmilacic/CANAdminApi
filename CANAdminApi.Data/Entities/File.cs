@@ -14,6 +14,6 @@ namespace CANAdminApi.Data.Entities
 
         public byte[] FileContent { get; set; }
 
-        public ICollection<NetworkNode> NetworkNodes { get; set; } = new HashSet<NetworkNode>();
+        public virtual ICollection<NetworkNode> NetworkNodes { get; set; } = new HashSet<NetworkNode>();
     }
 }

@@ -148,7 +148,7 @@ namespace CANAdminApi.Data.Migrations
             modelBuilder.Entity("CANAdminApi.Data.Entities.CanMessage", b =>
                 {
                     b.HasOne("CANAdminApi.Data.Entities.NetworkNode", "NetworkNode")
-                        .WithMany()
+                        .WithMany("CanMessages")
                         .HasForeignKey("NetworkNodeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -157,7 +157,7 @@ namespace CANAdminApi.Data.Migrations
             modelBuilder.Entity("CANAdminApi.Data.Entities.CanSignal", b =>
                 {
                     b.HasOne("CANAdminApi.Data.Entities.CanMessage", "CanMessage")
-                        .WithMany()
+                        .WithMany("CanSignals")
                         .HasForeignKey("CanMessageId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();

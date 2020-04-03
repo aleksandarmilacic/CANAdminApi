@@ -61,11 +61,7 @@ namespace CANAdminApi
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "CANAdminApi", Version = "v1" });
           
             });
-            services.AddCors(o => o.AddPolicy("CSPolicy", builder =>
-            {
-
-                builder.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod().Build();
-            }));
+          
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -86,19 +82,16 @@ namespace CANAdminApi
             }
             app.UseHttpsRedirection();
             app.UseStaticFiles();
-            app.UseCors("CSPolicy");
             AutomapperConfig.RegisterMappings();
             app.UseSwagger();
             app.UseSwaggerUI(c =>
             {
                 c.SwaggerEndpoint("/swagger/v1/swagger.json", "CANAdminApi V1");
             });
-            app.UseAuthentication();
-
+           
 
             app.UseRouting();
 
-            app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
             {

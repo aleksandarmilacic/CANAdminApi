@@ -12,8 +12,8 @@ namespace CANAdminApi.Data.Entities
         public Guid FileId { get; set; }
 
         [ForeignKey(nameof(FileId))]
-        public File File { get; set; }
+        public virtual File File { get; set; }
 
-        public ICollection<CanMessage> CanMessages = new HashSet<CanMessage>();
+        public virtual ICollection<CanMessage> CanMessages { get; set; } = new HashSet<CanMessage>();
     }
 }

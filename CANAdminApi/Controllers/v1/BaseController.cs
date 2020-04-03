@@ -12,7 +12,6 @@ using Microsoft.AspNetCore.Mvc;
 namespace CANAdminApi.Controllers.v1
 {
     [ApiController]
-    [EnableCors("CSPolicy")]
     public abstract class BaseController<TDTOModel, TDTOListModel, TBMOModel> : ControllerBase
        where TDTOModel : class
        where TDTOListModel : class

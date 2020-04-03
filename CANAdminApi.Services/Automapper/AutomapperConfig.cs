@@ -30,6 +30,7 @@ namespace CANAdminApi.Services.Automapper
                 )
             );
                 config.CompileMappings();
+
                 return new Mapper(config);
             }
         }

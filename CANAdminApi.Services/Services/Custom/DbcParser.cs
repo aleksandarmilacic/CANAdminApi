@@ -13,82 +13,123 @@ namespace CANAdminApi.Services.Services.Custom
         // BO_ = CAN Message = ID, Name (BO_ 199 WheelInfoIEEE: 8 ABS) (199, WheelInfoIEEE)
         // SG_ = CAN Signal = Name, Start bit, length (SG_ WheelSpeedFR : 32|32@1- (1,0) [0|1300] "1/min"  GearBox,EngineControl) (WheelSpeedFR, 32,32)
         // EV_ = Environment Variable
+        private List<string> LIST = new List<string>();
 
         public DbcParser() 
         { 
             
         }
 
-        public FileBMO LoadFromStream(string fileName, Stream stream)
+        public async System.Threading.Tasks.Task<FileBMO> LoadFromStreamAsync(string fileName, Stream stream)
         {
-            stream.Seek(0, SeekOrigin.Begin);
+           // stream.Seek(0, SeekOrigin.Begin);
 
             FileBMO obj = new FileBMO();
-            obj.FileContent = ReadFully(stream);
             obj.FileName = fileName;
             obj.MimeType = MimeMapping.MimeUtility.GetMimeMapping(fileName);
             obj.Extension = Path.GetExtension(fileName);
-            string content;
-            using (StreamReader reader = new StreamReader(stream, Encoding.UTF8))
+            obj.FileContent = await ReadFullyAsync(stream);
+            using(var ms = new MemoryStream(obj.FileContent))
+            using (StreamReader reader = new StreamReader(ms, Encoding.UTF8))
             {
-                obj.NetworkNodes = GetNetworkNodes(reader);
+                await ReadLinesAsync(reader); 
             }
-
+          
+            obj.NetworkNodes = GetNetworkNodes();
             return obj;
         }
 
-        private byte[] ReadFully(Stream input)
+        private async System.Threading.Tasks.Task<byte[]> ReadFullyAsync(Stream input)
         {
             using (MemoryStream ms = new MemoryStream())
             {
-                input.CopyTo(ms);
+                await input.CopyToAsync(ms);
                 return ms.ToArray();
             }
         }
 
-        private IEnumerable<NetworkNodeBMO> GetNetworkNodes(StreamReader content)
+        private async System.Threading.Tasks.Task ReadLinesAsync(StreamReader content)
         {
-            string line;
-            IEnumerable<NetworkNodeBMO> list = new HashSet<NetworkNodeBMO>();
-            while ((line = content.ReadLine()) != null)
+            string line; 
+
+            while ((line = await content.ReadLineAsync().ConfigureAwait(false)) != null)
+            { 
+                LIST.Add(line);
+            }
+            if (LIST.Count == 0) throw new Exception("File is empty!");
+        }
+
+        private IEnumerable<NetworkNodeBMO> GetNetworkNodes()
+        {
+            List<NetworkNodeBMO> list = new List<NetworkNodeBMO>();
+            foreach(var line in LIST)
             {
                 if(line.StartsWith("BU_: "))
                 {
-                    var networkNodes = line.Split(' ').ToList(); // start from index >0
-                    if (networkNodes.Count > 0) networkNodes.RemoveAt(0); // remove the "BU_:"
+                    var networkNodes = line.Split(' ').ToList(); 
+                    if (networkNodes.Count > 0) networkNodes.RemoveAt(0); // remove the "BU_:"// start from index >0
                     if (networkNodes.Count == 0) throw new Exception("File does not contain Network Node names.");
-                    list = networkNodes.Select(a => new NetworkNodeBMO() { Name = a });
-                    foreach(var node in list)
-                    {
-                        node.CanMessages = GetCanMessages(node, content);
-                    }
+                    list.AddRange(networkNodes.Select(a => new NetworkNodeBMO() { Name = a }).ToList());
+
+                    list.ForEach(a => a.CanMessages = GetCanMessages(a));
+                   
                 }
             }
 
             return list;
         }
 
-        private IEnumerable<CanMessageBMO> GetCanMessages(NetworkNodeBMO networkNode, StreamReader content)
-        {
-            string line;
-            IEnumerable<CanMessageBMO> list = new HashSet<CanMessageBMO>();
-            while ((line = content.ReadLine()) != null)
+        private IEnumerable<CanMessageBMO> GetCanMessages(NetworkNodeBMO networkNode)
+        { 
+            List<CanMessageBMO> list = new List<CanMessageBMO>();
+            int i = 0;
+            foreach (var line in LIST)
             {
-                if (line.StartsWith("BO_: "))
+                if (line.StartsWith("BO_ "))
                 {
-                    var message = line.Split(' ').ToList(); // start from index >0
-                    if (message.Count > 0) message.RemoveAt(0); // remove the "BU_:"
-                    if (message.Count == 0) throw new Exception("File does not contain Can Messages.");
-                    list = message.Select(a => new CanMessageBMO() { Name = a });
-                    foreach (var node in list)
-                    {
-                        node.CanMessages = GetCanMessages(node, content);
-                    }
+                    var messages = line.Split(' ').ToList();  
+                    if (messages.Count > 0) messages.RemoveAt(0); 
+                    if (messages.Count == 0) throw new Exception("File does not contain Can Messages.");
+
+                    CanMessageBMO message = new CanMessageBMO();
+                    message.ID = long.Parse(messages[0]);
+                    message.Name = messages[1]?.Replace(":", "");
+
+                    message.CanSignals = GetCanSignals(networkNode, i);
+                    // should we ignore this if there is no signals (as a side effect, of not having relations to any network node)?
+                    list.Add(message);
                 }
+                i++;
             }
 
             return list;
         }
 
+        private IEnumerable<CanSignalBMO> GetCanSignals(NetworkNodeBMO networkNode, int boLineIndex)
+        {
+            List<CanSignalBMO> list = new List<CanSignalBMO>();
+            for(var i = boLineIndex + 1; i < LIST.Count; i++)
+            {
+                if (string.IsNullOrEmpty(LIST[i])) break;
+                if (LIST[i].StartsWith(" SG_ ") && LIST[i].Split(' ').LastOrDefault().Contains(networkNode.Name))
+                {
+                    var lineBase = LIST[i].Split(":");
+                    if (lineBase.Length != 2) throw new Exception("File is corrupted!");
+
+                    var signalName = lineBase[0].Split(" ")[2];
+                    var info = lineBase[1].Split(" ")[1];
+                    var info1 = info.Split("|");
+                    var signal = new CanSignalBMO();
+                    signal.Name = signalName;
+                    signal.StartBit = ushort.Parse(info1[0]);
+                    signal.Length = ushort.Parse(info1[1].Split("@")[0]);
+                    list.Add(signal);
+                }
+                else if (LIST[i].StartsWith(" SG_ ") && !LIST[i].Split(' ').LastOrDefault().Contains(networkNode.Name)) continue; // these ones should go maybe in a seperate list?
+                else
+                    throw new Exception("File is corrupted.");
+            }
+            return list;
+        }
     }
 }

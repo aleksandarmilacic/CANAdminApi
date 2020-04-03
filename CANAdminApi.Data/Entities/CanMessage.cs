@@ -16,8 +16,8 @@ namespace CANAdminApi.Data.Entities
         public Guid NetworkNodeId { get; set; }
 
         [ForeignKey(nameof(NetworkNodeId))]
-        public NetworkNode NetworkNode { get; set; }
+        public virtual NetworkNode NetworkNode { get; set; }
 
-        public ICollection<CanSignal> CanSignals = new HashSet<CanSignal>();
+        public virtual ICollection<CanSignal> CanSignals { get; set; } = new HashSet<CanSignal>();
     }
 }
