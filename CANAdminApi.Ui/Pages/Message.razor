@@ -1,0 +1,67 @@
+﻿@page "/File/{Id:guid}/NetworkNode/{NodeId:guid}/Message/{MessageId:guid}"
+@using CANAdminApi.Services.Services
+@using CANAdminApi.Services.DTOModels
+@using CANAdminApi.Services.Models
+@inject FileService FileService
+<h3>Message</h3>
+@if (Model == null)
+{
+<h2>Please wait...</h2>
+}
+else
+{
+<a class="btn btn-sm btn-info" href="/File/@Model.Id/NetworkNode/@Node.Id"> Back to Network Node</a>
+<h4>Filename: @Model.FileName</h4>
+<h4>Network node: @Node.Name</h4>
+<h4>Message id/name: @CANMessage.ID  / @CANMessage.Name</h4>
+<table class="table table-info">
+    <thead>
+        <tr>
+            <th>
+                Signal name
+            </th>
+            <th>
+                Start bit
+            </th>
+            <th>
+                Length
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in CANMessage.CanSignals)
+            {
+        <tr>
+            <td>
+                @(item.Name)
+            </td>
+            <td>
+                @(item.StartBit)
+            </td>
+            <td>
+                @(item.Length)
+            </td>
+        </tr>
+            }
+    </tbody>
+</table>
+
+}
+@code {
+    [Parameter]
+    public Guid Id { get; set; }
+    [Parameter]
+    public Guid NodeId { get; set; }
+    [Parameter]
+    public Guid MessageId { get; set; }
+
+    FileDTO Model { get; set; }
+    NetworkNodeDTO Node { get; set; }
+    CanMessageDTO CANMessage { get; set; }
+    protected override async Task OnInitializedAsync()
+    {
+        Model = await FileService.GetAsync(Id).ConfigureAwait(false);
+        Node = Model.NetworkNodes.SingleOrDefault(a => a.Id == NodeId);
+        CANMessage = Node.CanMessages.SingleOrDefault(a => a.Id == MessageId);
+    }
+}

@@ -1,0 +1,85 @@
+﻿@page "/"
+@using CANAdminApi.Services.Services
+@using CANAdminApi.Services.DTOModels
+@using CANAdminApi.Services.Models
+@using Blazor.FileReader 
+@inject IFileReaderService fileReaderService
+@inject FileService FileService
+@inject IJSRuntime JSRuntime;
+<h1>CAN DBC files</h1>
+
+
+@if (files == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Timestamp</th>
+                <th>Filename</th>
+                <th>Network nodes</th>
+                <th><input type="file" @ref=inputTypeFileElement accept=".dbc"/> <button @onclick="() => Upload()" class="btn btn-sm btn-success">Load</button></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var file in files.Data)
+            {
+                <tr>
+                    <td>@file.Created.ToString()</td>
+                    <td>@file.FileName</td>
+                    <td>@string.Join(", ", file.NetworkNodes.Select(a => a.Name))</td>
+                    <td>
+                        <a class="btn btn-sm btn-info" href="/File/@file.Id">Open</a>
+                        <button class="btn btn-sm btn-danger" @onclick="() => DeleteFile(file.Id)">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+<CANAdminApi.Ui.Pages.ModalAlertComponent showModal="showModal" Content="@warningContent" Title="@warningTitle"/>
+
+
+@code {
+    private PaginationList<IEnumerable<FileDTO>> files;
+    ElementReference inputTypeFileElement;
+    bool showModal = false;
+    string warningTitle = "";
+    string warningContent = "";
+    protected override async Task OnInitializedAsync()
+    {
+        files = await FileService.GetAllAsync();
+    }
+
+    private async Task DeleteFile(Guid Id)
+    {
+        await FileService.DeleteAsync(Id).ConfigureAwait(false);
+        files = await FileService.GetAllAsync();
+    }
+
+    private async Task Upload()
+    {
+        var list = await fileReaderService.CreateReference(inputTypeFileElement).EnumerateFilesAsync();
+
+        if (list.Count() == 0)
+        {
+            showModal = true;
+            warningTitle = "Warning";
+            warningContent = "No files selected!";
+        }
+
+        foreach (var file in list)
+        {
+            var fileInfo = await file.ReadFileInfoAsync();
+            using (var stream = await file.CreateMemoryStreamAsync())
+                await FileService.CreateAsync(stream, fileInfo.Name);
+        }
+        if (list.Count() > 0)
+            files = await FileService.GetAllAsync();
+        await fileReaderService.CreateReference(inputTypeFileElement).ClearValue();
+    }
+}

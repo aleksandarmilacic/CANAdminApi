@@ -1,0 +1,53 @@
+﻿@page "/File/{Id:guid}"
+@using CANAdminApi.Services.Services
+@using CANAdminApi.Services.DTOModels
+@using CANAdminApi.Services.Models
+@inject FileService FileService
+<h3>File</h3>
+@if (Model == null)
+{
+    <h2>Please wait...</h2>
+}
+else
+{
+    <a class="btn btn-sm btn-info" href="/"> Back to Index</a>
+    <h4>Filename: @Model.FileName</h4>
+
+    <table class="table table-info">
+        <thead>
+            <tr>
+                <th>
+                    Network nodes
+                </th>
+                <th>
+                    CAN Messages
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.NetworkNodes)
+            {
+                <tr>
+                    <td>
+                        @(item.Name)
+                    </td>
+                    <td>
+                        <a href="/File/@Model.Id/NetworkNode/@item.Id" class="btn btn-sm btn-info">Open (@(item.CanMessages.Count()))</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+}
+@code {
+    [Parameter]
+    public Guid Id { get; set; }
+    FileDTO Model { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Model = await FileService.GetAsync(Id).ConfigureAwait(false);
+
+    }
+}

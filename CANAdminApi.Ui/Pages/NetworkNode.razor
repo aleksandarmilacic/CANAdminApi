@@ -1,0 +1,63 @@
+﻿@page "/File/{Id:guid}/NetworkNode/{NodeId:guid}"
+@using CANAdminApi.Services.Services
+@using CANAdminApi.Services.DTOModels
+@using CANAdminApi.Services.Models
+@inject FileService FileService
+<h3>Network node</h3>
+@if (Model == null)
+{
+    <h2>Please wait...</h2>
+}
+else
+{
+    <a class="btn btn-sm btn-info" href="/File/@Model.Id"> Back to File</a>
+    <h4>Filename: @Model.FileName</h4>
+    <h4>Network node: @Node.Name</h4>
+    <table class="table table-info">
+        <thead>
+            <tr>
+                <th>
+                    CAN Message ID
+                </th>
+                <th>
+                    CAN Message Name
+                </th>
+                <th>
+                    CAN Signals
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Node.CanMessages)
+            {
+            <tr>
+                <td>
+                    @(item.ID)
+                </td>
+                <td>
+                    @(item.Name)
+                </td>
+
+                <td>
+                    <a href="/File/@Model.Id/NetworkNode/@Node.Id/Message/@(item.Id)" class="btn btn-sm btn-info">Open (@(item.CanSignals.Count()))</a>
+                </td>
+            </tr>
+            }
+        </tbody>
+    </table>
+
+}
+@code {
+    [Parameter]
+    public Guid Id { get; set; }
+    [Parameter]
+    public Guid NodeId { get; set; }
+
+    FileDTO Model { get; set; }
+    NetworkNodeDTO Node { get; set; }
+    protected override async Task OnInitializedAsync()
+    {
+        Model = await FileService.GetAsync(Id).ConfigureAwait(false);
+        Node = Model.NetworkNodes.SingleOrDefault(a => a.Id == NodeId);
+    }
+}

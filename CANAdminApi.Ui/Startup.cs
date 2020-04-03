@@ -2,22 +2,20 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using CANAdminApi.Data;
-using CANAdminApi.Data.Repositories;
-using CANAdminApi.Services.Automapper;
-using CANAdminApi.Services.Services;
-using CANAdminApi.Services.Services.Custom;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Microsoft.OpenApi.Models;
+using Microsoft.Extensions.Hosting; 
+using CANAdminApi.Data;
+using CANAdminApi.Data.Repositories;
+using CANAdminApi.Services.Services.Custom;
+using CANAdminApi.Services.Services;
+using Blazor.FileReader;
 
-namespace CANAdminApi
+namespace CANAdminApi.Ui
 {
     public class Startup
     {
@@ -25,6 +23,8 @@ namespace CANAdminApi
         {
             Configuration = configuration;
         }
+
+        public IConfiguration Configuration { get; }
         public void AddServices(IServiceCollection services)
         {
             var asm = typeof(GroundBaseService).Assembly;
@@ -35,33 +35,21 @@ namespace CANAdminApi
                 services.AddScoped(typ);
             }
         }
-
-
-        public IConfiguration Configuration { get; }
-
         // This method gets called by the runtime. Use this method to add services to the container.
+        // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddControllers();
+            services.AddRazorPages();
+            services.AddServerSideBlazor().AddHubOptions(o =>
+            {
+                o.MaximumReceiveMessageSize = 10 * 1024 * 1024; // 10MB
+            }); 
             services.AddDbContext<Context>();
             services.AddScoped(typeof(Repository<>));
-   
+            services.AddFileReaderService(options => options.UseWasmSharedBuffer = true);
+            services.AddFileReaderService();
             AddServices(services);
             services.AddScoped<ColumnMappingService>();
-            services.AddHttpContextAccessor();
-            services.AddMvc(config =>
-            {
-
-               
-            }).SetCompatibilityVersion(CompatibilityVersion.Version_3_0)
-            .AddNewtonsoftJson(options => options.SerializerSettings.ReferenceLoopHandling = Newtonsoft.Json.ReferenceLoopHandling.Ignore);
-            services.AddSwaggerGen(c =>
-            {
-
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "CANAdminApi", Version = "v1" });
-          
-            });
-          
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -73,29 +61,20 @@ namespace CANAdminApi
             }
             else
             {
-         
-                app.UseExceptionHandler(new ExceptionHandlerOptions
-                {
-                    ExceptionHandler = new CANAdminApi.Services.Exceptions.GenericException().Invoke
-                });
+                app.UseExceptionHandler("/Error");
+                // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
                 app.UseHsts();
             }
+
             app.UseHttpsRedirection();
             app.UseStaticFiles();
-            AutomapperConfig.RegisterMappings();
-            app.UseSwagger();
-            app.UseSwaggerUI(c =>
-            {
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "CANAdminApi V1");
-            });
-           
 
             app.UseRouting();
 
-
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapControllers();
+                endpoints.MapBlazorHub();
+                endpoints.MapFallbackToPage("/_Host");
             });
         }
     }

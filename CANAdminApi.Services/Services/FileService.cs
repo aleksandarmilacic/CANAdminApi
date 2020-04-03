@@ -26,7 +26,14 @@ namespace CANAdminApi.Services.Services
             var model = await dbcParser.LoadFromStreamAsync(file.FileName, file.OpenReadStream());
             return await base.CreateAsync(model);
         }
-         
+
+        public async Task<FileDTO> CreateAsync(System.IO.Stream stream, string fileName)
+        {
+            var dbcParser = new DbcParser();
+
+            var model = await dbcParser.LoadFromStreamAsync(fileName, stream);
+            return await base.CreateAsync(model);
+        }
 
         protected override IQueryable<Data.Entities.File> GetAllEntities()
         {
